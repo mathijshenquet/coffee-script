@@ -10,8 +10,15 @@ CoffeeScript.eval = (code, options = {}) ->
 
 # Running code does not provide access to this scope.
 CoffeeScript.run = (code, options = {}) ->
+  source = options.source
+  
   options.bare = on
-  Function(CoffeeScript.compile code, options)()
+  try
+    Function(CoffeeScript.compile code, options)()
+  catch e
+    if source?
+      e.message = "#{e.name} in #{source}: #{e.message}"
+    throw e
 
 # If we're not in a browser environment, we're finished with the public API.
 return unless window?
@@ -24,7 +31,7 @@ CoffeeScript.load = (url, callback) ->
   xhr.onreadystatechange = ->
     if xhr.readyState is 4
       if xhr.status in [0, 200]
-        CoffeeScript.run xhr.responseText
+        CoffeeScript.run xhr.responseText, {source: url}
       else
         throw new Error "Could not load #{url}"
       callback() if callback
@@ -44,7 +51,7 @@ runScripts = ->
       if script.src
         CoffeeScript.load script.src, execute
       else
-        CoffeeScript.run script.innerHTML
+        CoffeeScript.run script.innerHTML, {source: script.src}
         execute()
   null
 
